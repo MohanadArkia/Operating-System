@@ -6,18 +6,54 @@ start:
 main_loop:
     MOV SI, prompt
     CALL print_string
+    
+    MOV DI, input_buffer
+    CALL read_input
 
-read_keypress:
+; ===== Functions =====
+read_input:
+    XOR CX, CX
+
+.read_input_loop:
     MOV AH, 0x00
     INT 0x16
 
     CMP AL, 13
-    JE new_line
+    JE .done
+
+    CMP Al, 8
+    JE .backspace
+
+    STOSB
+    INC CX
 
     MOV AH, 0x0E
     INT 0x10
+    JMP .read_input_loop
 
-    JMP read_keypress
+.backspace:
+    CMP CX, 0
+    JE .read_input_loop
+
+    DEC DI
+    DEC CX
+
+    MOV AL, 8
+    MOV AH, 0x0E
+    INT 0x10
+
+    MOV AL, ' '
+    INT 0x10
+
+    MOV AL, 8
+    INT 0x10
+
+    JMP .read_input_loop
+.done:
+    MOV AL, 0
+    STOSB
+    CALL new_line
+    RET
 
 new_line:
     MOV AL, 0x0D
@@ -49,4 +85,12 @@ clear_screen:
     INT 0x10
     RET
 
-prompt db "user@os: ", 0
+; ===== Variables =====
+prompt      db "user@os: ", 0
+help_cmd    db "help", 0
+clear_cmd   db "clear", 0
+help_msg    db "Commands: help, clear", 0
+unknown_cmd db "Invalid command", 0
+
+input_buffer TIMES 128 db 0
+
